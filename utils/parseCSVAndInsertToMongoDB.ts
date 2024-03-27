@@ -14,7 +14,7 @@ export const parseCSVAndInsertToMongoDB = async (filePath: string) => {
       const event = new Event({
         eventName: row.event_name,
         city: row.city_name,
-        date: new Date(row.date),
+        date: row.date,
         time: row.time,
         location: {
           type: "Point",

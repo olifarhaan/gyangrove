@@ -6,6 +6,9 @@ import { CustomErrorHandler } from "../utils/CustomErrorHandler";
 import { catchAsyncError } from "../middlewares/catchAsyncError";
 import mongoose from "mongoose";
 
+export const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+export const timeRegex = /^[0-9]{2}:[0-9]{2}:[0-9]{2}$/;
+
 const getEventsController = catchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     const {
@@ -28,27 +31,40 @@ const getEventsController = catchAsyncError(
       );
     }
 
+    if (
+      isNaN(parseFloat(latitude as string)) ||
+      isNaN(parseFloat(longitude as string))
+    ) {
+      return next(
+        new CustomErrorHandler(400, "Latitude and longitude must be numbers")
+      );
+    }
+
+    if (!dateRegex.test(date as string)) {
+      return next(
+        new CustomErrorHandler(
+          400,
+          "Date format must be YYYY-MM-DD (e.g., 2024-03-01)"
+        )
+      );
+    }
+
     try {
+      const endDate = new Date(date as string);
+      endDate.setDate(endDate.getDate() + 14);
+
       const eventsCount = await Event.countDocuments({
         date: {
-          $gte: new Date(date as string),
-          $lte: new Date(
-            new Date(date as string).setDate(
-              new Date(date as string).getDate() + 14
-            )
-          ),
+          $gte: date as string,
+          $lte: endDate.toISOString().split("T")[0],
         },
       });
 
       const totalPages = Math.ceil(eventsCount / pageSize);
       const events: IEvent[] = await Event.find({
         date: {
-          $gte: new Date(date as string),
-          $lte: new Date(
-            new Date(date as string).setDate(
-              new Date(date as string).getDate() + 14
-            )
-          ),
+          $gte: date as string,
+          $lte: endDate.toISOString().split("T")[0],
         },
       })
         .skip((page - 1) * pageSize)
@@ -58,13 +74,15 @@ const getEventsController = catchAsyncError(
       // Fetch weather and calculate distance for each event
       const eventsWithDetails = await Promise.all(
         events.map(async (event) => {
-          const weather = await fetchWeather(event.city, event.date);
-          const distance = await calculateDistance(
-            parseFloat(latitude.toString()),
-            parseFloat(longitude.toString()),
-            event.location.coordinates[1],
-            event.location.coordinates[0]
-          );
+          const [weather, distance] = await Promise.all([
+            fetchWeather(event.city, event.date),
+            calculateDistance(
+              parseFloat(latitude.toString()),
+              parseFloat(longitude.toString()),
+              event.location.coordinates[1],
+              event.location.coordinates[0]
+            ),
+          ]);
           return {
             eventName: event.eventName,
             city: event.city,
@@ -88,12 +106,12 @@ const getEventsController = catchAsyncError(
   }
 );
 
-const fetchWeather = async (city: string, date: Date): Promise<string> => {
+const fetchWeather = async (city: string, date: string): Promise<string> => {
   try {
     const response = await fetch(
       `https://gg-backend-assignment.azurewebsites.net/api/Weather?code=KfQnTWHJbg1giyB_Q9Ih3Xu3L9QOBDTuU5zwqVikZepCAzFut3rqsg==&city=${encodeURIComponent(
         city
-      )}&date=${date.toISOString().split("T")[0]}`
+      )}&date=${date}`
     );
     const data = await response.json();
     return data.weather;
@@ -123,7 +141,6 @@ const calculateDistance = async (
 
 const createEventController = catchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
-    console.log("first");
     const { eventName, city, date, time, latitude, longitude } = req.body;
 
     try {
@@ -132,12 +149,39 @@ const createEventController = catchAsyncError(
         return next(new CustomErrorHandler(400, "All fields are required"));
       }
 
+      if (
+        isNaN(parseFloat(latitude as string)) ||
+        isNaN(parseFloat(longitude as string))
+      ) {
+        return next(
+          new CustomErrorHandler(400, "Latitude and longitude must be numbers")
+        );
+      }
+
+      if (!dateRegex.test(date as string)) {
+        return next(
+          new CustomErrorHandler(
+            400,
+            `${date} is not a valid date format (YYYY-MM-DD)`
+          )
+        );
+      }
+
+      if (!timeRegex.test(time as string)) {
+        return next(
+          new CustomErrorHandler(
+            400,
+            `${time} is not a valid time format (HH:mm:ss)`
+          )
+        );
+      }
+
       // Create new event document
       const event: IEvent = new Event({
         _id: new mongoose.Types.ObjectId(), // Generate a new ObjectId
         eventName,
         city,
-        date: new Date(date),
+        date,
         time,
         location: {
           type: "Point",
