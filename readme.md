@@ -99,7 +99,7 @@ Node, Express, TypeScript, and MongoDB are widely adopted technologies with acti
 
 - **Description:** This endpoint allows users to create a new event.
 
-- **URL:** `/api/v1/events`
+- **URL:** `https://gyangrove-9jfk.onrender.com/api/v1/events`
 
 - **Method:** `POST`
 
@@ -110,7 +110,7 @@ Node, Express, TypeScript, and MongoDB are widely adopted technologies with acti
   "eventName": "Sample Event",
   "city": "Sample City",
   "date": "2024-03-01",
-  "time": "10:00 AM",
+  "time": "10:00:00",
   "latitude": 40.7128,
   "longitude": -74.0060
 }
@@ -128,7 +128,7 @@ Node, Express, TypeScript, and MongoDB are widely adopted technologies with acti
     "eventName": "Sample Event",
     "city": "Sample City",
     "date": "2024-03-01",
-    "time": "10:00 AM",
+    "time": "10:00:00",
     "location": {
       "type": "Point",
       "coordinates": [
