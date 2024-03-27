@@ -1,13 +1,12 @@
 import express, { NextFunction, Request, Response } from "express";
-import cookieParser from "cookie-parser";
 import cors from "cors";
 import { customErrorHandlerMiddleware } from "./middlewares/customErrorHandlerMiddleware";
 import responseMiddleware from "./middlewares/responseMiddleware";
 import eventRouter from "./routes/eventRoutes";
 import { parseCSVAndInsertToMongoDB } from "./utils/parseCSVAndInsertToMongoDB";
-import rateLimit from "express-rate-limit"
-import helmet from "helmet"
-import mongoSanitize from "express-mongo-sanitize"
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
 
 export const app = express();
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL;
@@ -19,13 +18,12 @@ const globalLimiter = rateLimit({
     success: false,
     message: "Too many requests, please try again later",
   },
-})
+});
 
-app.use("/api", globalLimiter)
-app.use(helmet())
-app.use(mongoSanitize()) // sanitization againt NOSQL query injection
+app.use("/api", globalLimiter);
+app.use(helmet());
+app.use(mongoSanitize()); // sanitization againt NOSQL query injection
 app.use(express.json({ limit: "50mb" }));
-app.use(cookieParser());
 app.use(cors({ origin: FRONTEND_BASE_URL })); // If the frontend will be added most probably on Vite
 app.use(responseMiddleware);
 
